@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=2]
+
+[ext_resource path="res://shaders/crt-lottes.tres" type="Material" id=1]
+
+[node name="CTR" type="ColorRect"]
+material = ExtResource( 1 )
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_top = 600.0
+margin_bottom = 600.0
+rect_rotation = 180.0
+rect_scale = Vector2( -1, 1 )
+__meta__ = {
+"_edit_use_anchors_": false
+}
