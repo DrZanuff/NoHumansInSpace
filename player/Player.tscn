@@ -1,10 +1,14 @@
-[gd_scene load_steps=3 format=2]
+[gd_scene load_steps=5 format=2]
 
 [ext_resource path="res://player/player_controller.gd" type="Script" id=1]
+[ext_resource path="res://Morphus/Morphus.fbx" type="PackedScene" id=2]
 
 [sub_resource type="CapsuleShape" id=1]
 radius = 0.6
 height = 1.5
+
+[sub_resource type="Animation" id=2]
+resource_name = "Attack"
 
 [node name="Player" type="KinematicBody" groups=[
 "Player",
@@ -30,3 +34,12 @@ far = 250.0
 [node name="RayCast" type="RayCast" parent="."]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.75, 0 )
 enabled = true
+
+[node name="Morphus" type="Position3D" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.46452, -6.72165 )
+
+[node name="MorphusAnim" type="AnimationPlayer" parent="Morphus"]
+anims/Attack = SubResource( 2 )
+
+[node name="Morphus" parent="Morphus" instance=ExtResource( 2 )]
+transform = Transform( -0.299629, 0, -9.76316e-08, -3.71825e-08, 0.277049, 0.114112, 9.0274e-08, 0.114112, -0.277049, 0, 0, 0.629302 )

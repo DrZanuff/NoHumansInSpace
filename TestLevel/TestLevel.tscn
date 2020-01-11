@@ -1353,5 +1353,5 @@ material = SubResource( 67 )
 
 [node name="Static" parent="." instance=ExtResource( 5 )]
 modulate = Color( 0.25098, 0.25098, 0.25098, 0.27451 )
-frame = 0
+frame = 1
 playing = true
