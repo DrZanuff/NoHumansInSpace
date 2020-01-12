@@ -38,6 +38,9 @@ onready var raycast: RayCast = get_node(raycast_path)
 ##################################################
 
 func _ready() -> void:
+	print("\n\n\n\n\n")
+	print("Debug:")
+	OS.window_position = Vector2(0,0)
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
 	cam.fov = FOV
 
@@ -186,6 +189,21 @@ func camera_rotation(delta: float) -> void:
 
 
 func kill_player():
-	alive = false
-	$AnimationPlayer.play("Kill")
+	if alive:
+		alive = false
+		$AnimationPlayer.play("Kill")
+
+func set_danger(level):
+	match level:
+		0:
+			$Interfaces/UI/AnimationPlayer.play("NoDanger")
+			
+		1:
+			$Interfaces/UI/AnimationPlayer.play("Danger0")
+			
+		2:
+			$Interfaces/UI/AnimationPlayer.play("Danger1")
+			
+		3:
+			$Interfaces/UI/AnimationPlayer.play("Danger2")
 

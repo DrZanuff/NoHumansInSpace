@@ -1,4 +1,4 @@
-[gd_scene load_steps=14 format=2]
+[gd_scene load_steps=15 format=2]
 
 [ext_resource path="res://player/player_controller.gd" type="Script" id=1]
 [ext_resource path="res://Morphus/MorphusUI.tscn" type="PackedScene" id=2]
@@ -8,6 +8,7 @@
 [ext_resource path="res://shaders/BreakGlass.ogg" type="AudioStream" id=6]
 [ext_resource path="res://Morphus/Sounds/Alien scream.ogg" type="AudioStream" id=7]
 [ext_resource path="res://shaders/LostSignal.ogg" type="AudioStream" id=8]
+[ext_resource path="res://player/UI/UI.tscn" type="PackedScene" id=9]
 
 [sub_resource type="CapsuleShape" id=1]
 radius = 0.6
@@ -555,6 +556,20 @@ tracks/11/keys = {
 "update": 0,
 "values": [ 0.0, 0.0, -80.0 ]
 }
+tracks/12/type = "method"
+tracks/12/path = NodePath("Interfaces/UI")
+tracks/12/interp = 1
+tracks/12/loop_wrap = true
+tracks/12/imported = false
+tracks/12/enabled = true
+tracks/12/keys = {
+"times": PoolRealArray( 1.7 ),
+"transitions": PoolRealArray( 1 ),
+"values": [ {
+"args": [  ],
+"method": "kill_ui"
+} ]
+}
 
 [node name="Player" type="KinematicBody" groups=[
 "Player",
@@ -590,6 +605,8 @@ mouse_filter = 2
 [node name="AlienScream" type="AudioStreamPlayer" parent="Interfaces/MorphusUI"]
 stream = ExtResource( 7 )
 
+[node name="UI" parent="Interfaces" instance=ExtResource( 9 )]
+
 [node name="CTR" parent="Interfaces" instance=ExtResource( 3 )]
 material = SubResource( 3 )
 mouse_filter = 2
@@ -612,14 +629,14 @@ __meta__ = {
 }
 
 [node name="ColorRect" type="ColorRect" parent="Interfaces/Break"]
-margin_right = 1085.0
+margin_right = 1084.0
 margin_bottom = 653.0
 mouse_filter = 2
 color = Color( 0, 0, 0, 0 )
 
 [node name="Texture" type="TextureRect" parent="Interfaces/Break"]
 material = SubResource( 4 )
-margin_right = 1085.0
+margin_right = 1084.0
 margin_bottom = 653.0
 texture = ExtResource( 5 )
 expand = true

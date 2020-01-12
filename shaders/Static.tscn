@@ -43,7 +43,7 @@ tracks/0/keys = {
 "times": PoolRealArray( 0 ),
 "transitions": PoolRealArray( 1 ),
 "update": 0,
-"values": [ Color( 0.25098, 0.25098, 0.25098, 0.705882 ) ]
+"values": [ Color( 0.25098, 0.25098, 0.25098, 0.529412 ) ]
 }
 tracks/1/type = "value"
 tracks/1/path = NodePath("AudioStreamPlayer:playing")
@@ -87,7 +87,7 @@ tracks/1/keys = {
 }
 
 [node name="Static" type="AnimatedSprite"]
-modulate = Color( 0.25098, 0.25098, 0.25098, 0.584314 )
+modulate = Color( 0.25098, 0.25098, 0.25098, 0.705882 )
 scale = Vector2( 1.28382, 1 )
 frames = SubResource( 1 )
 frame = 3

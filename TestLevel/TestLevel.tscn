@@ -1,8 +1,10 @@
-[gd_scene load_steps=69 format=2]
+[gd_scene load_steps=77 format=2]
 
 [ext_resource path="res://TestLevel/DefaultMaterial.material" type="Material" id=1]
 [ext_resource path="res://TestLevel/Material.material" type="Material" id=2]
 [ext_resource path="res://player/Player.tscn" type="PackedScene" id=3]
+[ext_resource path="res://DangerZones/DangerZones.tscn" type="PackedScene" id=4]
+[ext_resource path="res://DangerZones/Zones.gd" type="Script" id=5]
 
 [sub_resource type="ArrayMesh" id=1]
 surfaces/0 = {
@@ -547,6 +549,29 @@ surfaces/0 = {
 [sub_resource type="ConcavePolygonShape" id=65]
 data = PoolVector3Array( -0.0632, 0.2057, -0.01, -0.0632, -0.01, 0.01, -0.0632, -0.01, -0.01, -0.0632, 0.2057, -0.01, -0.0632, 0.2057, 0.01, -0.0632, -0.01, 0.01, 0.0567, 0.2057, -0.01, -0.0632, 0.2057, 0.01, -0.0632, 0.2057, -0.01, 0.0567, 0.2057, -0.01, 0.0567, 0.2057, 0.01, -0.0632, 0.2057, 0.01, 0.0567, -0.01, -0.01, 0.0567, 0.2057, 0.01, 0.0567, 0.2057, -0.01, 0.0567, -0.01, -0.01, 0.0567, -0.01, 0.01, 0.0567, 0.2057, 0.01, -0.0632, -0.01, -0.01, 0.0567, -0.01, 0.01, 0.0567, -0.01, -0.01, -0.0632, -0.01, -0.01, -0.0632, -0.01, 0.01, 0.0567, -0.01, 0.01, -0.0632, -0.01, -0.01, 0.0567, 0.2057, -0.01, -0.0632, 0.2057, -0.01, -0.0632, -0.01, -0.01, 0.0567, -0.01, -0.01, 0.0567, 0.2057, -0.01, 0.0567, -0.01, 0.01, -0.0632, 0.2057, 0.01, 0.0567, 0.2057, 0.01, 0.0567, -0.01, 0.01, -0.0632, -0.01, 0.01, -0.0632, 0.2057, 0.01 )
 
+[sub_resource type="ProceduralSky" id=66]
+sky_top_color = Color( 0, 0, 0, 1 )
+sky_horizon_color = Color( 0, 0, 0, 1 )
+
+[sub_resource type="Environment" id=67]
+background_mode = 2
+background_sky = SubResource( 66 )
+ambient_light_color = Color( 0.0862745, 0.0823529, 0.188235, 1 )
+ambient_light_energy = 1.34
+ambient_light_sky_contribution = 0.2
+
+[sub_resource type="BoxShape" id=71]
+extents = Vector3( 18.3653, 4.04533, 2.74292 )
+
+[sub_resource type="BoxShape" id=68]
+extents = Vector3( 4.62437, 3.46703, 9.20132 )
+
+[sub_resource type="BoxShape" id=69]
+extents = Vector3( 4.62437, 3.46703, 9.20132 )
+
+[sub_resource type="BoxShape" id=70]
+extents = Vector3( 2.05385, 3.46703, 9.20132 )
+
 [node name="TestLevel" type="Node"]
 
 [node name="TestLevel" type="Spatial" parent="."]
@@ -948,11 +973,162 @@ shape = SubResource( 65 )
 
 [node name="DirectionalLight" type="DirectionalLight" parent="."]
 transform = Transform( -0.692408, 0.391195, -0.606249, 0, 0.840254, 0.542192, 0.721506, 0.375418, -0.581799, 0, 15.4118, -24.5725 )
-light_color = Color( 0.72549, 0.823529, 0.819608, 1 )
-light_energy = 0.5
+light_color = Color( 0.392157, 0.443137, 0.439216, 1 )
+light_energy = 0.3
 shadow_enabled = true
 
 [node name="Player" parent="." instance=ExtResource( 3 )]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -5.03867, 2.26279, -15.4505 )
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -3.15909, 2.26279, -15.4505 )
 walk_speed = 4
 sprint_speed = 10
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource( 67 )
+
+[node name="Zones" type="Node" parent="."]
+script = ExtResource( 5 )
+
+[node name="Nodes" type="Node" parent="Zones"]
+
+[node name="DangerZones" parent="Zones/Nodes" instance=ExtResource( 4 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.61158, 0 )
+
+[node name="DangerZones6" parent="Zones/Nodes" instance=ExtResource( 4 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -20.9851, 1.61158, -19.3597 )
+
+[node name="CollisionShape" parent="Zones/Nodes/DangerZones6" index="0"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -1.39693, 1.66829, -0.558773 )
+shape = SubResource( 71 )
+
+[node name="DangerZones7" parent="Zones/Nodes" instance=ExtResource( 4 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -20.9851, 1.61158, -8.32771 )
+
+[node name="CollisionShape" parent="Zones/Nodes/DangerZones7" index="0"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -1.39693, 1.66829, -0.558773 )
+shape = SubResource( 71 )
+
+[node name="DangerZones2" parent="Zones/Nodes" instance=ExtResource( 4 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 9.0035, 1.61158, -0.472641 )
+
+[node name="DangerZones3" parent="Zones/Nodes" instance=ExtResource( 4 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 11.8386, 0, -13.0703 )
+
+[node name="CollisionShape" parent="Zones/Nodes/DangerZones3" index="0"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.48999, -1.23176 )
+shape = SubResource( 68 )
+
+[node name="DangerZones4" parent="Zones/Nodes" instance=ExtResource( 4 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 11.8386, 7.93801, -13.0703 )
+
+[node name="CollisionShape" parent="Zones/Nodes/DangerZones4" index="0"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.48999, -1.23176 )
+shape = SubResource( 69 )
+
+[node name="DangerZones5" parent="Zones/Nodes" instance=ExtResource( 4 )]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 4.243, 7.93801, -13.0703 )
+
+[node name="CollisionShape" parent="Zones/Nodes/DangerZones5" index="0"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2152, 3.48999, -1.23176 )
+shape = SubResource( 70 )
+
+[node name="TestLevel2" type="Spatial" parent="."]
+
+[node name="CSGBox" type="CSGBox" parent="TestLevel2"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.04691, -25.2917 )
+use_collision = true
+width = 12.2824
+height = 6.84611
+
+[node name="CSGCombiner" type="CSGCombiner" parent="TestLevel2"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -6.44258, 0, -14.4138 )
+use_collision = true
+
+[node name="CSGBox" type="CSGBox" parent="TestLevel2/CSGCombiner"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -15.3943, 6.06015, 0.315223 )
+width = 33.3409
+height = 11.7337
+depth = 19.1544
+
+[node name="CSGCombiner2" type="CSGCombiner" parent="TestLevel2/CSGCombiner"]
+transform = Transform( 1.63359, 0, 0, 0, 1, 0, 0, 0, 1, -16.5049, 2.08891, -5.43538 )
+operation = 2
+
+[node name="CSGBox" type="CSGBox" parent="TestLevel2/CSGCombiner/CSGCombiner2"]
+width = 22.8595
+height = 3.70685
+depth = 4.25799
+
+[node name="CSGCylinder" type="CSGCylinder" parent="TestLevel2/CSGCombiner/CSGCombiner2"]
+transform = Transform( -1.62921e-07, -1, 0, 1, -1.62921e-07, 0, 0, 0, 1, 0, 2.2201, 0 )
+radius = 2.24506
+height = 22.8574
+
+[node name="CSGCombiner3" type="CSGCombiner" parent="TestLevel2/CSGCombiner"]
+transform = Transform( 1.63359, 0, 0, 0, 1, 0, 0, 0, 1, -16.5049, 2.08891, 5.84259 )
+operation = 2
+
+[node name="CSGBox" type="CSGBox" parent="TestLevel2/CSGCombiner/CSGCombiner3"]
+width = 22.8595
+height = 3.70685
+depth = 4.25799
+
+[node name="CSGCylinder" type="CSGCylinder" parent="TestLevel2/CSGCombiner/CSGCombiner3"]
+transform = Transform( -1.62921e-07, -1, 0, 1, -1.62921e-07, 0, 0, 0, 1, 0, 2.2201, 0 )
+radius = 2.24506
+height = 22.8574
+
+[node name="CSGCylinder" type="CSGCylinder" parent="TestLevel2"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -44.3587, 4.12201, -13.5825 )
+use_collision = true
+radius = 13.4637
+height = 14.2423
+
+[node name="CSGCylinder2" type="CSGCylinder" parent="TestLevel2/CSGCylinder"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.84828, 0 )
+operation = 2
+use_collision = true
+radius = 11.9176
+height = 15.4858
+
+[node name="CSGBox" type="CSGBox" parent="TestLevel2/CSGCylinder"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 12.6926, 1.68342, 0 )
+operation = 2
+width = 12.7759
+height = 12.3028
+depth = 23.5362
+
+[node name="Lights" type="Spatial" parent="TestLevel2"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -44.3587, 4.12201, -13.5825 )
+
+[node name="OmniLight" type="OmniLight" parent="TestLevel2/Lights"]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.42042, 0 )
+omni_range = 13.2554
+
+[node name="OmniLight" type="OmniLight" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 11.4874, 12.2438, -13.9615 )
+light_color = Color( 0.945098, 0.839216, 0.352941, 1 )
+light_energy = 0.6
+omni_range = 5.36393
+omni_attenuation = 1.86607
+
+[node name="OmniLight2" type="OmniLight" parent="."]
+transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -4.84765, 6.85009, -13.9615 )
+light_color = Color( 0.945098, 0.839216, 0.352941, 1 )
+light_energy = 0.6
+shadow_enabled = true
+omni_range = 10.1087
+omni_attenuation = 1.86607
+
+[editable path="Zones/Nodes/DangerZones"]
+
+[editable path="Zones/Nodes/DangerZones6"]
+
+[editable path="Zones/Nodes/DangerZones7"]
+
+[editable path="Zones/Nodes/DangerZones2"]
+
+[editable path="Zones/Nodes/DangerZones3"]
+
+[editable path="Zones/Nodes/DangerZones4"]
+
+[editable path="Zones/Nodes/DangerZones5"]
