@@ -1,5 +1,7 @@
 extends KinematicBody
 
+export var alive = true
+
 ##################################################
 
 # Camera
@@ -41,19 +43,23 @@ func _ready() -> void:
 
 
 func _physics_process(delta: float) -> void:
-	
+
 	if Input.is_action_just_pressed("restart"):
 		get_tree().reload_current_scene()
 		
 	if Input.is_action_just_pressed("quit"):
 		get_tree().quit()
 	
-	camera_rotation(delta)
-	
-	if flying:
-		fly(delta)
-	else:
-		walk(delta)
+	if alive:
+		camera_rotation(delta)
+
+		if Input.is_action_just_pressed("debug_kill"):
+			kill_player()
+
+		if flying:
+			fly(delta)
+		else:
+			walk(delta)
 
 
 func _input(event: InputEvent) -> void:
@@ -177,3 +183,9 @@ func camera_rotation(delta: float) -> void:
 		var temp_rot: Vector3 = head.rotation_degrees
 		temp_rot.x = clamp(temp_rot.x, -90, 90)
 		head.rotation_degrees = temp_rot
+
+
+func kill_player():
+	alive = false
+	$AnimationPlayer.play("Kill")
+

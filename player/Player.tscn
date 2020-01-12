@@ -1,14 +1,560 @@
-[gd_scene load_steps=5 format=2]
+[gd_scene load_steps=14 format=2]
 
 [ext_resource path="res://player/player_controller.gd" type="Script" id=1]
-[ext_resource path="res://Morphus/Morphus.fbx" type="PackedScene" id=2]
+[ext_resource path="res://Morphus/MorphusUI.tscn" type="PackedScene" id=2]
+[ext_resource path="res://shaders/CTR.tscn" type="PackedScene" id=3]
+[ext_resource path="res://shaders/Static.tscn" type="PackedScene" id=4]
+[ext_resource path="res://shaders/Break.jpg" type="Texture" id=5]
+[ext_resource path="res://shaders/BreakGlass.ogg" type="AudioStream" id=6]
+[ext_resource path="res://Morphus/Sounds/Alien scream.ogg" type="AudioStream" id=7]
+[ext_resource path="res://shaders/LostSignal.ogg" type="AudioStream" id=8]
 
 [sub_resource type="CapsuleShape" id=1]
 radius = 0.6
 height = 1.5
 
-[sub_resource type="Animation" id=2]
-resource_name = "Attack"
+[sub_resource type="Shader" id=2]
+code = "/*
+	Port of libretro's crt-lottes.glsl to Godot shading language.
+	Source: https://github.com/libretro/glsl-shaders/blob/master/crt/shaders/crt-lottes.glsl
+	
+	From original:
+	
+	PUBLIC DOMAIN CRT STYLED SCAN-LINE SHADER
+	
+	  by Timothy Lottes
+	
+	This is more along the style of a really good CGA arcade monitor.
+	With RGB inputs instead of NTSC.
+	The shadow mask example has the mask rotated 90 degrees for less chromatic aberration.
+	
+	Left it unoptimized to show the theory behind the algorithm.
+	
+	It is an example what I personally would want as a display option for pixel art games.
+	Please take and use, change, or whatever.	
+*/
+
+shader_type canvas_item;
+render_mode blend_mix;
+
+// hardScan
+uniform float hardScan: hint_range(-20.0, 0.0, 1.0) = -8.0;
+
+// hardPix
+uniform float hardPix: hint_range(-20.0, 0.0, 1.0) = -3.0;
+
+// warpX
+uniform float warpX: hint_range(0.0, 0.125, 0.01) = 0.031;
+
+// warpY
+uniform float warpY: hint_range(0.0, 0.125, 0.01) = 0.041;
+
+// maskDark
+uniform float maskDark: hint_range(0.0, 2.0, 0.1) = 0.5;
+
+// maskLight
+uniform float maskLight: hint_range(0.0, 2.0, 0.1) = 1.5;
+
+// scaleInLinearGamma
+uniform float scaleInLinearGamma: hint_range(0.0, 1.0, 1.0) = 1.0;
+
+// shadowMask
+uniform float shadowMask: hint_range(0.0, 4.0, 1.0) = 3.0;
+
+// brightness boost
+uniform float brightBoost: hint_range(0.0, 2.0, 0.05) = 1.0;
+
+// bloom-x soft
+uniform float hardBloomPix: hint_range(-2.0, -0.5, 0.1) = -1.5;
+
+// bloom-y soft
+uniform float hardBloomScan: hint_range(-4.0, -1.0, 0.1) = -2.0;
+
+// bloom ammount
+uniform float bloomAmount: hint_range(0.0, 1.0, 0.05) = 0.15;
+
+// filter kernel shape
+uniform float shape: hint_range(0.0, 10.0, 0.05) = 2.0;
+
+
+uniform vec2 OutputSize;
+uniform vec2 TextureSize;
+uniform vec2 InputSize;
+uniform int FrameCount;
+//uniform int FrameDirection; // not used
+
+/*
+NOTE: Godot shading language does not support \"\"#define\", so \"SourceSize\"
+has been inlined where used, and commented accordingly.
+*/
+//#define SourceSize vec4(TextureSize, 1.0 / TextureSize) //either TextureSize or InputSize
+
+/*
+NOTE: Godot shading language does not support \"\"#define\", so these ones
+must be commented/uncommented in the corresponding \"#ifdef\"/\"#ifndef\" sections.
+*/
+
+// reduce instructions with simpler linearization (fixes HD3000 Sandy Bridge IGP)
+// Default in original GLSL source: disabled
+//#define SIMPLE_LINEAR_GAMMA
+
+// apply bloom
+// Default in original GLSL source: enabled
+//#define DO_BLOOM
+
+
+// ------------- //
+
+// sRGB to Linear.
+// Assuming using sRGB typed textures this should not be needed.
+
+//#ifdef SIMPLE_LINEAR_GAMMA
+/*
+float ToLinear1(float c) {
+    return c;
+}
+
+vec3 ToLinear(vec3 c) {
+    return c;
+}
+
+vec3 ToSrgb(vec3 c) {
+    return pow(c, vec3(1.0 / 2.2));
+}
+*/
+//#else
+
+float ToLinear1(float c) {
+    if (scaleInLinearGamma == 0.) 
+        return c;
+    
+    return(c<=0.04045) ? c/12.92 : pow((c + 0.055)/1.055, 2.4);
+}
+
+vec3 ToLinear(vec3 c) {
+    if (scaleInLinearGamma==0.) 
+        return c;
+    
+    return vec3(ToLinear1(c.r), ToLinear1(c.g), ToLinear1(c.b));
+}
+
+// Linear to sRGB.
+// Assuming using sRGB typed textures this should not be needed.
+float ToSrgb1(float c) {
+    if (scaleInLinearGamma == 0.) 
+        return c;
+    
+    return(c<0.0031308 ? c*12.92 : 1.055*pow(c, 0.41666) - 0.055);
+}
+
+vec3 ToSrgb(vec3 c) {
+    if (scaleInLinearGamma == 0.) 
+        return c;
+    
+    return vec3(ToSrgb1(c.r), ToSrgb1(c.g), ToSrgb1(c.b));
+}
+
+//#endif
+
+// Nearest emulated sample given floating point position and texel offset.
+// Also zero's off screen.
+vec3 Fetch(sampler2D _TEXTURE, vec2 pos,vec2 off) {
+	
+	//pos=(floor(pos*SourceSize.xy+off)+vec2(0.5,0.5))/SourceSize.xy;
+	pos=(floor(pos*vec4(TextureSize, 1.0 / TextureSize).xy+off)+vec2(0.5,0.5))/vec4(TextureSize, 1.0 / TextureSize).xy;
+	
+	//#ifdef SIMPLE_LINEAR_GAMMA
+	//return ToLinear(brightBoost * pow(texture(_TEXTURE,pos.xy).rgb, vec3(2.2)));
+	//#else
+	return ToLinear(brightBoost * texture(_TEXTURE,pos.xy).rgb);
+	//#endif
+}
+
+// Distance in emulated pixels to nearest texel.
+vec2 Dist(vec2 pos) {
+	//pos = pos*SourceSize.xy;
+	pos = pos*vec4(TextureSize, 1.0 / TextureSize).xy;
+	
+	return -((pos - floor(pos)) - vec2(0.5));
+}
+
+// 1D Gaussian.
+float Gaus(float pos, float scale) {
+	return exp2(scale*pow(abs(pos), shape));
+}
+
+// 3-tap Gaussian filter along horz line.
+vec3 Horz3(sampler2D _TEXTURE, vec2 pos, float off) {
+	vec3 b    = Fetch(_TEXTURE, pos, vec2(-1.0, off));
+	vec3 c    = Fetch(_TEXTURE, pos, vec2( 0.0, off));
+	vec3 d    = Fetch(_TEXTURE, pos, vec2( 1.0, off));
+	float dst = Dist(pos).x;
+	
+	// Convert distance to weight.
+	float scale = hardPix;
+	float wb = Gaus(dst-1.0,scale);
+	float wc = Gaus(dst+0.0,scale);
+	float wd = Gaus(dst+1.0,scale);
+	
+	// Return filtered sample.
+	return (b*wb+c*wc+d*wd)/(wb+wc+wd);
+}
+
+// 5-tap Gaussian filter along horz line.
+vec3 Horz5(sampler2D _TEXTURE, vec2 pos,float off) {
+	vec3 a = Fetch(_TEXTURE, pos,vec2(-2.0, off));
+	vec3 b = Fetch(_TEXTURE, pos,vec2(-1.0, off));
+	vec3 c = Fetch(_TEXTURE, pos,vec2( 0.0, off));
+	vec3 d = Fetch(_TEXTURE, pos,vec2( 1.0, off));
+	vec3 e = Fetch(_TEXTURE, pos,vec2( 2.0, off));
+	
+	float dst = Dist(pos).x;
+	// Convert distance to weight.
+	float scale = hardPix;
+	float wa = Gaus(dst - 2.0, scale);
+	float wb = Gaus(dst - 1.0, scale);
+	float wc = Gaus(dst + 0.0, scale);
+	float wd = Gaus(dst + 1.0, scale);
+	float we = Gaus(dst + 2.0, scale);
+	
+	// Return filtered sample.
+	return (a*wa+b*wb+c*wc+d*wd+e*we)/(wa+wb+wc+wd+we);
+}
+
+// 7-tap Gaussian filter along horz line.
+vec3 Horz7(sampler2D _TEXTURE, vec2 pos,float off) {
+	vec3 a = Fetch(_TEXTURE, pos, vec2(-3.0, off));
+	vec3 b = Fetch(_TEXTURE, pos, vec2(-2.0, off));
+	vec3 c = Fetch(_TEXTURE, pos, vec2(-1.0, off));
+	vec3 d = Fetch(_TEXTURE, pos, vec2( 0.0, off));
+	vec3 e = Fetch(_TEXTURE, pos, vec2( 1.0, off));
+	vec3 f = Fetch(_TEXTURE, pos, vec2( 2.0, off));
+	vec3 g = Fetch(_TEXTURE, pos, vec2( 3.0, off));
+	
+	float dst = Dist(pos).x;
+	// Convert distance to weight.
+	float scale = hardBloomPix;
+	float wa = Gaus(dst - 3.0, scale);
+	float wb = Gaus(dst - 2.0, scale);
+	float wc = Gaus(dst - 1.0, scale);
+	float wd = Gaus(dst + 0.0, scale);
+	float we = Gaus(dst + 1.0, scale);
+	float wf = Gaus(dst + 2.0, scale);
+	float wg = Gaus(dst + 3.0, scale);
+	
+	// Return filtered sample.
+return (a*wa+b*wb+c*wc+d*wd+e*we+f*wf+g*wg)/(wa+wb+wc+wd+we+wf+wg);
+}
+
+// Return scanline weight.
+float Scan(vec2 pos, float off) {
+	float dst = Dist(pos).y;
+	
+	return Gaus(dst + off, hardScan);
+}
+  
+// Return scanline weight for bloom.
+float BloomScan(vec2 pos, float off) {
+	float dst = Dist(pos).y;
+	
+	return Gaus(dst + off, hardBloomScan);
+}
+
+// Allow nearest three lines to effect pixel.
+vec3 Tri(sampler2D _TEXTURE, vec2 pos) {
+	vec3 a = Horz3(_TEXTURE, pos,-1.0);
+	vec3 b = Horz5(_TEXTURE, pos, 0.0);
+	vec3 c = Horz3(_TEXTURE, pos, 1.0);
+	
+	float wa = Scan(pos,-1.0); 
+	float wb = Scan(pos, 0.0);
+	float wc = Scan(pos, 1.0);
+	
+	return a*wa + b*wb + c*wc;
+}
+  
+// Small bloom.
+vec3 Bloom(sampler2D _TEXTURE, vec2 pos) {
+	vec3 a = Horz5(_TEXTURE, pos,-2.0);
+	vec3 b = Horz7(_TEXTURE, pos,-1.0);
+	vec3 c = Horz7(_TEXTURE, pos, 0.0);
+	vec3 d = Horz7(_TEXTURE, pos, 1.0);
+	vec3 e = Horz5(_TEXTURE, pos, 2.0);
+	
+	float wa = BloomScan(pos,-2.0);
+	float wb = BloomScan(pos,-1.0); 
+	float wc = BloomScan(pos, 0.0);
+	float wd = BloomScan(pos, 1.0);
+	float we = BloomScan(pos, 2.0);
+	
+	return a*wa+b*wb+c*wc+d*wd+e*we;
+}
+
+// Distortion of scanlines, and end of screen alpha.
+vec2 Warp(vec2 pos) {
+	pos  = pos*2.0-1.0;    
+	pos *= vec2(1.0 + (pos.y*pos.y)*warpX, 1.0 + (pos.x*pos.x)*warpY);
+	
+	return pos*0.5 + 0.5;
+}
+
+// Shadow mask.
+vec3 Mask(vec2 pos) {
+	vec3 mask = vec3(maskDark, maskDark, maskDark);
+	
+	// Very compressed TV style shadow mask.
+	if (shadowMask == 1.0) 
+	{
+	    float line = maskLight;
+	    float odd = 0.0;
+	    
+	    if (fract(pos.x*0.166666666) < 0.5) odd = 1.0;
+	    if (fract((pos.y + odd) * 0.5) < 0.5) line = maskDark;  
+	    
+	    pos.x = fract(pos.x*0.333333333);
+	
+	    if      (pos.x < 0.333) mask.r = maskLight;
+	    else if (pos.x < 0.666) mask.g = maskLight;
+	    else                    mask.b = maskLight;
+	    mask*=line;  
+	} 
+	
+	// Aperture-grille.
+	else if (shadowMask == 2.0) 
+	{
+	    pos.x = fract(pos.x*0.333333333);
+	
+	    if      (pos.x < 0.333) mask.r = maskLight;
+	    else if (pos.x < 0.666) mask.g = maskLight;
+	    else                    mask.b = maskLight;
+	} 
+	
+	// Stretched VGA style shadow mask (same as prior shaders).
+	else if (shadowMask == 3.0) 
+	{
+	    pos.x += pos.y*3.0;
+	    pos.x  = fract(pos.x*0.166666666);
+	
+	    if      (pos.x < 0.333) mask.r = maskLight;
+	    else if (pos.x < 0.666) mask.g = maskLight;
+	    else                    mask.b = maskLight;
+	}
+	
+	// VGA style shadow mask.
+	else if (shadowMask == 4.0) 
+	{
+	    pos.xy  = floor(pos.xy*vec2(1.0, 0.5));
+	    pos.x  += pos.y*3.0;
+	    pos.x   = fract(pos.x*0.166666666);
+	
+	    if      (pos.x < 0.333) mask.r = maskLight;
+	    else if (pos.x < 0.666) mask.g = maskLight;
+	    else                    mask.b = maskLight;
+	}
+	
+	return mask;
+}
+
+void fragment() {
+	vec2 pos = Warp(UV.xy*(TextureSize.xy/InputSize.xy))*(InputSize.xy/TextureSize.xy);
+	vec3 outColor = Tri(SCREEN_TEXTURE, pos);
+	
+	//#ifdef DO_BLOOM
+	//Add Bloom
+	outColor.rgb += Bloom(SCREEN_TEXTURE, pos)*bloomAmount;
+	//#endif
+	
+	if (shadowMask > 0.0)
+	    outColor.rgb *= Mask(FRAGCOORD.xy * 1.000001);
+	
+	//#ifdef GL_ES    /* TODO/FIXME - hacky clamp fix */
+	
+	vec2 bordertest = (pos);
+	if ( bordertest.x > 0.0001 && bordertest.x < 0.9999 && bordertest.y > 0.0001 && bordertest.y < 0.9999)
+	    outColor.rgb = outColor.rgb;
+	else
+	    outColor.rgb = vec3(0.0);
+	
+	//#endif
+	
+	COLOR = vec4(ToSrgb(outColor.rgb), 1.0);
+}
+"
+
+[sub_resource type="ShaderMaterial" id=3]
+resource_local_to_scene = true
+shader = SubResource( 2 )
+shader_param/hardScan = -8.0
+shader_param/hardPix = -3.0
+shader_param/warpX = 0.031
+shader_param/warpY = 0.041
+shader_param/maskDark = 0.5
+shader_param/maskLight = 1.5
+shader_param/scaleInLinearGamma = 1.0
+shader_param/shadowMask = 3.0
+shader_param/brightBoost = 1.0
+shader_param/hardBloomPix = -1.5
+shader_param/hardBloomScan = -2.0
+shader_param/bloomAmount = 0.15
+shader_param/shape = 2.0
+shader_param/OutputSize = Vector2( 1024, 600 )
+shader_param/TextureSize = Vector2( 256, 224 )
+shader_param/InputSize = Vector2( 256, 224 )
+shader_param/FrameCount = 0
+
+[sub_resource type="CanvasItemMaterial" id=4]
+blend_mode = 1
+
+[sub_resource type="Animation" id=5]
+resource_name = "Kill"
+length = 7.0
+step = 0.05
+tracks/0/type = "method"
+tracks/0/path = NodePath("Interfaces/Static")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/keys = {
+"times": PoolRealArray( 0 ),
+"transitions": PoolRealArray( 1 ),
+"values": [ {
+"args": [  ],
+"method": "kill"
+} ]
+}
+tracks/1/type = "value"
+tracks/1/path = NodePath("Interfaces/Break:visible")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/keys = {
+"times": PoolRealArray( 0, 1.75 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ false, true ]
+}
+tracks/2/type = "value"
+tracks/2/path = NodePath("Interfaces/Break/ColorRect:color")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/keys = {
+"times": PoolRealArray( 0, 1.75, 2.1, 2.2 ),
+"transitions": PoolRealArray( 1, 1, 1, 1 ),
+"update": 0,
+"values": [ Color( 0, 0, 0, 0 ), Color( 0, 0, 0, 0 ), Color( 0, 0, 0, 0 ), Color( 0, 0, 0, 1 ) ]
+}
+tracks/3/type = "method"
+tracks/3/path = NodePath("Interfaces/MorphusUI")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/keys = {
+"times": PoolRealArray( 0.9 ),
+"transitions": PoolRealArray( 1 ),
+"values": [ {
+"args": [  ],
+"method": "kill_player_anim"
+} ]
+}
+tracks/4/type = "value"
+tracks/4/path = NodePath("Interfaces/Break:rect_rotation")
+tracks/4/interp = 1
+tracks/4/loop_wrap = true
+tracks/4/imported = false
+tracks/4/enabled = true
+tracks/4/keys = {
+"times": PoolRealArray( 0, 1.8, 1.85, 1.9, 2 ),
+"transitions": PoolRealArray( 1, 1, 1, 1, 1 ),
+"update": 0,
+"values": [ 0.0, 0.0, 1.0, -1.3, 0.0 ]
+}
+tracks/5/type = "value"
+tracks/5/path = NodePath(".:alive")
+tracks/5/interp = 1
+tracks/5/loop_wrap = true
+tracks/5/imported = false
+tracks/5/enabled = true
+tracks/5/keys = {
+"times": PoolRealArray( 0, 0.9 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ true, false ]
+}
+tracks/6/type = "value"
+tracks/6/path = NodePath("Interfaces/Break/Glass:playing")
+tracks/6/interp = 1
+tracks/6/loop_wrap = true
+tracks/6/imported = false
+tracks/6/enabled = true
+tracks/6/keys = {
+"times": PoolRealArray( 1.4, 2.3 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ true, false ]
+}
+tracks/7/type = "audio"
+tracks/7/path = NodePath("Interfaces/MorphusUI/AlienScream")
+tracks/7/interp = 1
+tracks/7/loop_wrap = true
+tracks/7/imported = false
+tracks/7/enabled = true
+tracks/7/keys = {
+"clips": [  ],
+"times": PoolRealArray(  )
+}
+tracks/8/type = "value"
+tracks/8/path = NodePath("Interfaces/MorphusUI/AlienScream:playing")
+tracks/8/interp = 1
+tracks/8/loop_wrap = true
+tracks/8/imported = false
+tracks/8/enabled = true
+tracks/8/keys = {
+"times": PoolRealArray( 0, 1.45, 2.2 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 1,
+"values": [ false, true, false ]
+}
+tracks/9/type = "value"
+tracks/9/path = NodePath("Interfaces/MorphusUI/AlienScream:stream")
+tracks/9/interp = 1
+tracks/9/loop_wrap = true
+tracks/9/imported = false
+tracks/9/enabled = true
+tracks/9/keys = {
+"times": PoolRealArray( 0, 2.25 ),
+"transitions": PoolRealArray( 1, 1 ),
+"update": 1,
+"values": [ ExtResource( 7 ), ExtResource( 7 ) ]
+}
+tracks/10/type = "value"
+tracks/10/path = NodePath("Interfaces/CTR/Signal:playing")
+tracks/10/interp = 1
+tracks/10/loop_wrap = true
+tracks/10/imported = false
+tracks/10/enabled = true
+tracks/10/keys = {
+"times": PoolRealArray( 0, 2.15, 6.8 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 1,
+"values": [ false, true, false ]
+}
+tracks/11/type = "value"
+tracks/11/path = NodePath("Interfaces/CTR/Signal:volume_db")
+tracks/11/interp = 1
+tracks/11/loop_wrap = true
+tracks/11/imported = false
+tracks/11/enabled = true
+tracks/11/keys = {
+"times": PoolRealArray( 0, 5.05, 6.8 ),
+"transitions": PoolRealArray( 1, 1, 1 ),
+"update": 0,
+"values": [ 0.0, 0.0, -80.0 ]
+}
 
 [node name="Player" type="KinematicBody" groups=[
 "Player",
@@ -28,6 +574,7 @@ shape = SubResource( 1 )
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0 )
 
 [node name="Camera" type="Camera" parent="Head"]
+current = true
 fov = 80.0
 far = 250.0
 
@@ -35,11 +582,53 @@ far = 250.0
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.75, 0 )
 enabled = true
 
-[node name="Morphus" type="Position3D" parent="."]
-transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -1.46452, -6.72165 )
+[node name="Interfaces" type="Node" parent="."]
 
-[node name="MorphusAnim" type="AnimationPlayer" parent="Morphus"]
-anims/Attack = SubResource( 2 )
+[node name="MorphusUI" parent="Interfaces" instance=ExtResource( 2 )]
+mouse_filter = 2
 
-[node name="Morphus" parent="Morphus" instance=ExtResource( 2 )]
-transform = Transform( -0.299629, 0, -9.76316e-08, -3.71825e-08, 0.277049, 0.114112, 9.0274e-08, 0.114112, -0.277049, 0, 0, 0.629302 )
+[node name="AlienScream" type="AudioStreamPlayer" parent="Interfaces/MorphusUI"]
+stream = ExtResource( 7 )
+
+[node name="CTR" parent="Interfaces" instance=ExtResource( 3 )]
+material = SubResource( 3 )
+mouse_filter = 2
+
+[node name="Signal" type="AudioStreamPlayer" parent="Interfaces/CTR"]
+stream = ExtResource( 8 )
+
+[node name="Static" parent="Interfaces" instance=ExtResource( 4 )]
+playing = true
+
+[node name="Break" type="MarginContainer" parent="Interfaces"]
+visible = false
+anchor_left = -0.0351562
+anchor_top = -0.0416667
+anchor_right = 1.02441
+anchor_bottom = 1.04667
+mouse_filter = 2
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="ColorRect" type="ColorRect" parent="Interfaces/Break"]
+margin_right = 1085.0
+margin_bottom = 653.0
+mouse_filter = 2
+color = Color( 0, 0, 0, 0 )
+
+[node name="Texture" type="TextureRect" parent="Interfaces/Break"]
+material = SubResource( 4 )
+margin_right = 1085.0
+margin_bottom = 653.0
+texture = ExtResource( 5 )
+expand = true
+__meta__ = {
+"_edit_use_anchors_": false
+}
+
+[node name="Glass" type="AudioStreamPlayer" parent="Interfaces/Break"]
+stream = ExtResource( 6 )
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+anims/Kill = SubResource( 5 )
