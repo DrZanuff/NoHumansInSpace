@@ -560,16 +560,16 @@ ambient_light_color = Color( 0.0862745, 0.0823529, 0.188235, 1 )
 ambient_light_energy = 1.34
 ambient_light_sky_contribution = 0.2
 
-[sub_resource type="BoxShape" id=71]
-extents = Vector3( 18.3653, 4.04533, 2.74292 )
-
 [sub_resource type="BoxShape" id=68]
-extents = Vector3( 4.62437, 3.46703, 9.20132 )
+extents = Vector3( 18.3653, 4.04533, 2.74292 )
 
 [sub_resource type="BoxShape" id=69]
 extents = Vector3( 4.62437, 3.46703, 9.20132 )
 
 [sub_resource type="BoxShape" id=70]
+extents = Vector3( 4.62437, 3.46703, 9.20132 )
+
+[sub_resource type="BoxShape" id=71]
 extents = Vector3( 2.05385, 3.46703, 9.20132 )
 
 [node name="TestLevel" type="Node"]
@@ -998,14 +998,14 @@ transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -20.9851, 1.61158, -19.3597 )
 
 [node name="CollisionShape" parent="Zones/Nodes/DangerZones6" index="0"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -1.39693, 1.66829, -0.558773 )
-shape = SubResource( 71 )
+shape = SubResource( 68 )
 
 [node name="DangerZones7" parent="Zones/Nodes" instance=ExtResource( 4 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -20.9851, 1.61158, -8.32771 )
 
 [node name="CollisionShape" parent="Zones/Nodes/DangerZones7" index="0"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -1.39693, 1.66829, -0.558773 )
-shape = SubResource( 71 )
+shape = SubResource( 68 )
 
 [node name="DangerZones2" parent="Zones/Nodes" instance=ExtResource( 4 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 9.0035, 1.61158, -0.472641 )
@@ -1015,21 +1015,21 @@ transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 11.8386, 0, -13.0703 )
 
 [node name="CollisionShape" parent="Zones/Nodes/DangerZones3" index="0"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.48999, -1.23176 )
-shape = SubResource( 68 )
+shape = SubResource( 69 )
 
 [node name="DangerZones4" parent="Zones/Nodes" instance=ExtResource( 4 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 11.8386, 7.93801, -13.0703 )
 
 [node name="CollisionShape" parent="Zones/Nodes/DangerZones4" index="0"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.48999, -1.23176 )
-shape = SubResource( 69 )
+shape = SubResource( 70 )
 
 [node name="DangerZones5" parent="Zones/Nodes" instance=ExtResource( 4 )]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, 4.243, 7.93801, -13.0703 )
 
 [node name="CollisionShape" parent="Zones/Nodes/DangerZones5" index="0"]
 transform = Transform( 1, 0, 0, 0, 1, 0, 0, 0, 1, -1.2152, 3.48999, -1.23176 )
-shape = SubResource( 70 )
+shape = SubResource( 71 )
 
 [node name="TestLevel2" type="Spatial" parent="."]
 
