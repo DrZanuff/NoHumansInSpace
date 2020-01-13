@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=2]
+
+[ext_resource path="res://Morphus/Morphus.obj" type="ArrayMesh" id=1]
+[ext_resource path="res://Morphus/Body.material" type="Material" id=2]
+
+[node name="Morphus" type="Spatial"]
+transform = Transform( 0.3, 0, 0, 0, 0.294484, 0.0572633, 0, -0.0572633, 0.294484, 0, 0, 0 )
+
+[node name="MeshInstance" type="MeshInstance" parent="."]
+mesh = ExtResource( 1 )
+material/0 = ExtResource( 2 )
+material/1 = ExtResource( 2 )
+material/2 = null
+material/3 = null
+material/4 = null
+material/5 = null
+material/6 = null
