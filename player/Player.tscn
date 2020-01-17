@@ -615,6 +615,7 @@ mouse_filter = 2
 stream = ExtResource( 8 )
 
 [node name="Static" parent="Interfaces" instance=ExtResource( 4 )]
+frame = 0
 playing = true
 
 [node name="Break" type="MarginContainer" parent="Interfaces"]
